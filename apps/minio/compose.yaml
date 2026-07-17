@@ -1,0 +1,22 @@
+name: services-minio
+
+services:
+  minio:
+    image: minio/minio:latest
+    pull_policy: always
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "127.0.0.1:9010:9000"
+      - "127.0.0.1:9011:9001"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    stop_grace_period: 30s

@@ -1,0 +1,28 @@
+name: services-llm-proxy
+
+services:
+  cli-proxy-api:
+    image: ${CLI_PROXY_IMAGE:-eceasy/cli-proxy-api:latest}
+    pull_policy: always
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8320:8317"
+    volumes:
+      - ./data:/data
+    networks:
+      - default
+      - databases
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8317' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    stop_grace_period: 30s
+
+networks:
+  databases:
+    external: true
+    name: services-databases_default
