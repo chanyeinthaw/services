@@ -1,0 +1,85 @@
+[tasks.up]
+description = "Start all service stacks and wait until they are healthy"
+depends = ["databases:up", "cache:up", "llm-proxy:up"]
+
+[tasks.down]
+description = "Stop all service stacks without deleting their data"
+run = [
+  "docker compose -f apps/llm-proxy/compose.yaml down --remove-orphans",
+  "docker compose -f cache/compose.yaml down --remove-orphans",
+  "docker compose -f databases/compose.yaml down --remove-orphans",
+]
+
+[tasks.pull]
+description = "Pull images for all service stacks"
+run = [
+  "docker compose -f databases/compose.yaml pull",
+  "docker compose -f cache/compose.yaml pull",
+  "docker compose -f apps/llm-proxy/compose.yaml pull",
+]
+
+[tasks.status]
+description = "Show containers in all service stacks"
+run = [
+  "docker compose -f databases/compose.yaml ps",
+  "docker compose -f cache/compose.yaml ps",
+  "docker compose -f apps/llm-proxy/compose.yaml ps",
+]
+
+[tasks.logs]
+description = "Follow logs from all service stacks"
+raw = true
+run = '''
+docker compose -f databases/compose.yaml logs --follow &
+databases_pid=$!
+docker compose -f cache/compose.yaml logs --follow &
+cache_pid=$!
+docker compose -f apps/llm-proxy/compose.yaml logs --follow &
+llm_proxy_pid=$!
+trap 'kill "$databases_pid" "$cache_pid" "$llm_proxy_pid" 2>/dev/null || true' EXIT INT TERM
+wait
+'''
+
+[tasks."databases:up"]
+description = "Start MySQL 8 and PostgreSQL 18"
+run = "docker compose -f databases/compose.yaml up -d --remove-orphans --wait --wait-timeout 180"
+
+[tasks."databases:down"]
+description = "Stop MySQL 8 and PostgreSQL 18"
+run = "docker compose -f databases/compose.yaml down --remove-orphans"
+
+[tasks."databases:logs"]
+description = "Follow database logs"
+raw = true
+run = "docker compose -f databases/compose.yaml logs --follow"
+
+[tasks."cache:up"]
+description = "Start Redis"
+run = "docker compose -f cache/compose.yaml up -d --remove-orphans --wait --wait-timeout 120"
+
+[tasks."cache:down"]
+description = "Stop Redis"
+run = "docker compose -f cache/compose.yaml down --remove-orphans"
+
+[tasks."cache:logs"]
+description = "Follow Redis logs"
+raw = true
+run = "docker compose -f cache/compose.yaml logs --follow"
+
+[tasks."llm-proxy:init-db"]
+description = "Create or update the CLIProxyAPI PostgreSQL role and database"
+run = "apps/llm-proxy/scripts/init-database.sh"
+
+[tasks."llm-proxy:up"]
+description = "Start CLIProxyAPI with PostgreSQL-backed configuration"
+depends = ["databases:up", "llm-proxy:init-db"]
+run = "docker compose -f apps/llm-proxy/compose.yaml up -d --remove-orphans --wait --wait-timeout 180"
+
+[tasks."llm-proxy:down"]
+description = "Stop CLIProxyAPI without deleting its local spool data"
+run = "docker compose -f apps/llm-proxy/compose.yaml down --remove-orphans"
+
+[tasks."llm-proxy:logs"]
+description = "Follow CLIProxyAPI logs"
+raw = true
+run = "docker compose -f apps/llm-proxy/compose.yaml logs --follow"

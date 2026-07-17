@@ -1,0 +1,18 @@
+name: services-cache
+
+services:
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "dev-redis"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "dev-redis", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    stop_grace_period: 30s
