@@ -107,6 +107,31 @@ description = "Follow MinIO logs"
 raw = true
 run = "docker compose -f apps/minio/compose.yaml logs --follow"
 
+[tasks."multica:up"]
+description = "Start Multica and its dedicated PostgreSQL stack"
+run = "docker compose -f apps/multica/compose.yaml up -d --remove-orphans --wait --wait-timeout 180"
+
+[tasks."multica:down"]
+description = "Stop Multica without deleting its data"
+run = "docker compose -f apps/multica/compose.yaml down --remove-orphans"
+
+[tasks."multica-daemon:up"]
+description = "Build and start the Multica Docker runtime daemon"
+run = "docker compose -f apps/multica-daemon/compose.yaml up -d --build --remove-orphans --wait --wait-timeout 300"
+
+[tasks."multica-daemon:down"]
+description = "Stop the Multica Docker runtime daemon"
+run = "docker compose -f apps/multica-daemon/compose.yaml down --remove-orphans"
+
+[tasks."multica-daemon:logs"]
+description = "Follow Multica Docker runtime logs"
+raw = true
+run = "docker compose -f apps/multica-daemon/compose.yaml logs --follow runtime"
+
+[tasks."multica-daemon:status"]
+description = "Show Multica Docker runtime status"
+run = "docker compose -f apps/multica-daemon/compose.yaml ps"
+
 [tasks."buzz:up"]
 description = "Start Buzz relay and Aaron"
 run = "docker compose -f apps/buzz/compose.yaml up -d --build --remove-orphans --wait --wait-timeout 300"

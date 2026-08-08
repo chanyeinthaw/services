@@ -1,0 +1,2 @@
+# Add trusted public keys here, or provide them through the compose-mounted
+# oxygen/silicon key files. Do not put private keys in this directory.

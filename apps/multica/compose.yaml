@@ -1,0 +1,149 @@
+# Multica self-hosted stack.
+#
+# This stack is self-contained: it does not use the shared Services
+# PostgreSQL, Redis, or MinIO stacks. Only the frontend and API are published
+# on localhost. The host ports default to 55472 (API) and 55471 (frontend)
+# so they do not conflict with common development servers. Put a reverse
+# proxy or tunnel in front of them when remote access is required.
+#
+# Persistent data is stored below this directory:
+#   ./data/postgres  - PostgreSQL/pgvector data
+#   ./data/uploads   - Multica local attachments
+#
+# The backend runs migrations automatically when it starts.
+
+name: services-multica
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-multica}
+      POSTGRES_USER: ${POSTGRES_USER:-multica}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in apps/multica/.env}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  backend:
+    image: ${MULTICA_BACKEND_IMAGE:-ghcr.io/multica-ai/multica-backend}:${MULTICA_BACKEND_TAG:-${MULTICA_IMAGE_TAG:-v0.4.21}}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-55472}:8080"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-multica}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-multica}?sslmode=disable
+      PORT: "8080"
+      APP_ENV: ${APP_ENV:-production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in apps/multica/.env}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://multica.si14.space}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://multica.si14.space,https://multica-api.si14.space}
+      MULTICA_APP_URL: ${MULTICA_APP_URL:-https://multica.si14.space}
+      MULTICA_PUBLIC_URL: ${MULTICA_PUBLIC_URL:-https://multica-api.si14.space}
+      MULTICA_TRUSTED_PROXIES: ${MULTICA_TRUSTED_PROXIES:-127.0.0.1/32}
+      RATE_LIMIT_TRUSTED_PROXIES: ${RATE_LIMIT_TRUSTED_PROXIES:-127.0.0.1/32}
+
+      # Local persistent attachment storage. S3_BUCKET is intentionally unset.
+      LOCAL_UPLOAD_DIR: /app/data/uploads
+      LOCAL_UPLOAD_BASE_URL: ${LOCAL_UPLOAD_BASE_URL:-}
+      ATTACHMENT_DOWNLOAD_MODE: ${ATTACHMENT_DOWNLOAD_MODE:-auto}
+      ATTACHMENT_DOWNLOAD_URL_TTL: ${ATTACHMENT_DOWNLOAD_URL_TTL:-30m}
+
+      # Authentication and signup.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@multica.ai}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_TLS: ${SMTP_TLS:-}
+      SMTP_TLS_INSECURE: ${SMTP_TLS_INSECURE:-false}
+      SMTP_EHLO_NAME: ${SMTP_EHLO_NAME:-}
+      MULTICA_DEV_VERIFICATION_CODE: ${MULTICA_DEV_VERIFICATION_CODE:-}
+      ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
+      ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
+      ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-}
+      DISABLE_WORKSPACE_CREATION: ${DISABLE_WORKSPACE_CREATION:-}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+
+      # Optional Google OAuth.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://multica.si14.space/auth/callback}
+
+      # Optional server-side OpenAI-compatible LLM helpers.
+      MULTICA_LLM_API_KEY: ${MULTICA_LLM_API_KEY:-}
+      MULTICA_LLM_BASE_URL: ${MULTICA_LLM_BASE_URL:-}
+      MULTICA_LLM_DEFAULT_MODEL: ${MULTICA_LLM_DEFAULT_MODEL:-}
+
+      # Optional integrations. Keep encryption keys in .env, not in compose.
+      GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:-}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      MULTICA_VCS_INTEGRATION_ENABLED: ${MULTICA_VCS_INTEGRATION_ENABLED:-true}
+      MULTICA_VCS_SECRET_KEY: ${MULTICA_VCS_SECRET_KEY:-}
+      MULTICA_LARK_SECRET_KEY: ${MULTICA_LARK_SECRET_KEY:-}
+      MULTICA_LARK_HTTP_BASE_URL: ${MULTICA_LARK_HTTP_BASE_URL:-}
+      MULTICA_LARK_CALLBACK_BASE_URL: ${MULTICA_LARK_CALLBACK_BASE_URL:-}
+      MULTICA_SLACK_SECRET_KEY: ${MULTICA_SLACK_SECRET_KEY:-}
+      MULTICA_WECOM_SECRET_KEY: ${MULTICA_WECOM_SECRET_KEY:-}
+      MULTICA_DINGTALK_SECRET_KEY: ${MULTICA_DINGTALK_SECRET_KEY:-}
+      COMPOSIO_API_KEY: ${COMPOSIO_API_KEY:-}
+      COMPOSIO_CALLBACK_BASE_URL: ${COMPOSIO_CALLBACK_BASE_URL:-}
+      COMPOSIO_STATE_SECRET: ${COMPOSIO_STATE_SECRET:-}
+
+      # Optional runtime / observability settings.
+      METRICS_ADDR: ${METRICS_ADDR:-}
+      REALTIME_METRICS_TOKEN: ${REALTIME_METRICS_TOKEN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ANALYTICS_DISABLED: ${ANALYTICS_DISABLED:-true}
+      POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+    volumes:
+      - ./data/uploads:/app/data/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  frontend:
+    image: ${MULTICA_WEB_IMAGE:-ghcr.io/multica-ai/multica-web}:${MULTICA_IMAGE_TAG:-v0.4.21}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-55471}:3000"
+    environment:
+      HOSTNAME: "0.0.0.0"
+      # The current web image resolves these at runtime. Keeping the API
+      # internal makes same-origin /ws proxying work without a web rebuild.
+      REMOTE_API_URL: ${REMOTE_API_URL:-http://backend:8080}
+      DOCS_URL: ${DOCS_URL:-}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes: {}

@@ -1,3 +1,4 @@
 **/data/
 databases/migrations/
 **/.env
+apps/multica-daemon/secrets/
