@@ -1,12 +1,57 @@
 # Multica runtime image.
 #
-# The image contains the development tools used by agent tasks. Runtime
-# repositories and credentials are configured at container startup so the
-# image can be rebuilt without baking private keys or tokens into a layer.
+# The runtime toolchain and Multica CLI are built into the image. Pi setup stays
+# in the persistent ~/.pi/agent bind mount because it owns model configuration,
+# settings, extensions, and other mutable user state.
+
+# syntax=docker/dockerfile:1.7
+
+ARG MULTICA_REPOSITORY=git@github.com:chanyeinthaw/multica.git
+ARG MULTICA_COMMIT=4dd2a04031ce32200212aeb960d14adec30d2e44
+ARG MULTICA_VERSION=v0.4.21-17-g4dd2a0403
+ARG MULTICA_COMMIT_SHORT=4dd2a0403
+ARG MULTICA_BUILD_DATE=unknown
+
+FROM golang:1.26.5-bookworm AS multica-builder
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG MULTICA_REPOSITORY
+ARG MULTICA_COMMIT
+ARG MULTICA_VERSION
+ARG MULTICA_COMMIT_SHORT
+ARG MULTICA_BUILD_DATE
+
+ENV GOTOOLCHAIN=local
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      git \
+      openssh-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /root/.ssh /src /out \
+    && ssh-keyscan -H github.com >/root/.ssh/known_hosts
+
+WORKDIR /src
+
+RUN --mount=type=ssh \
+    git clone "${MULTICA_REPOSITORY}" multica \
+    && git -C multica checkout --detach "${MULTICA_COMMIT}" \
+    && cd multica/server \
+    && go build \
+      -trimpath \
+      -ldflags "-s -w -X main.version=${MULTICA_VERSION} -X main.commit=${MULTICA_COMMIT_SHORT} -X main.date=${MULTICA_BUILD_DATE}" \
+      -o /out/multica \
+      ./cmd/multica
 
 FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
+
+ARG MULTICA_COMMIT
+ARG MULTICA_VERSION
+ARG MULTICA_COMMIT_SHORT
 
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
@@ -25,6 +70,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential \
       ca-certificates \
       curl \
+      gh \
       git \
       make \
       openssh-client \
@@ -63,9 +109,12 @@ COPY --chown=multica:multica mise.toml /home/multica/mise.toml
 RUN mise trust -y /home/multica/mise.toml \
     && mise install --yes
 
-# Prepare source locations. The repositories are fetched/updated by the
-# startup script so changing a branch or ref does not require an image build.
+# The Pi setup repository is intentionally installed at runtime because it
+# owns the persistent ~/.pi/agent contents: model catalogs, settings,
+# extensions, and authentication state.
 RUN mkdir -p /home/multica/.pi/agent /opt/src/multica
+
+COPY --from=multica-builder --chmod=0755 /out/multica /usr/local/bin/multica
 
 COPY --chown=multica:multica entrypoint.sh /usr/local/bin/multica-runtime-entrypoint
 COPY authorized_keys /etc/multica-runtime/authorized_keys
@@ -73,6 +122,7 @@ COPY authorized_keys /etc/multica-runtime/authorized_keys
 USER root
 RUN chmod 0755 /usr/local/bin/multica-runtime-entrypoint \
     && mkdir -p /etc/ssh/sshd_config.d \
+    && ln -s /home/multica/.local/share/mise/installs/pi/0.84.1/pi/pi /usr/local/bin/pi \
     && printf '%s\n' \
       'PermitRootLogin no' \
       'PasswordAuthentication no' \

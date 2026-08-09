@@ -5,6 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      ssh:
+        - default
+      args:
+        MULTICA_REPOSITORY: ${MULTICA_REPOSITORY:-git@github.com:chanyeinthaw/multica.git}
+        MULTICA_COMMIT: ${MULTICA_COMMIT:-4dd2a04031ce32200212aeb960d14adec30d2e44}
+        MULTICA_VERSION: ${MULTICA_VERSION:-v0.4.21-17-g4dd2a0403}
+        MULTICA_COMMIT_SHORT: ${MULTICA_COMMIT_SHORT:-4dd2a0403}
+        MULTICA_BUILD_DATE: ${MULTICA_BUILD_DATE:-unknown}
     image: local/multica-runtime:feat-pi-thinking-model-resolution
     restart: unless-stopped
     init: true
@@ -16,8 +24,9 @@ services:
       PATH: /home/multica/.local/share/mise/installs/node/26.7.0/bin:/home/multica/.local/share/mise/installs/bun/1.3.14/bin:/home/multica/.local/share/mise/installs/npm-pnpm/10.33.0/node_modules/.bin:/home/multica/.local/share/mise/installs/go/1.26.5/bin:/home/multica/.local/share/mise/installs/pi/0.84.1/pi:/home/multica/.local/share/mise/installs/pi/0.84.1:/home/multica/.local/bin:/home/multica/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       MISE_CONFIG_DIR: /home/multica/.config/mise
       MISE_CACHE_DIR: /home/multica/.cache/mise
-      MULTICA_SOURCE_DIR: /opt/src/multica
+      GH_CONFIG_DIR: /home/multica/.config/gh
       PI_SETUP_DIR: /home/multica/.pi/agent
+      MULTICA_PI_PATH: /usr/local/bin/pi
       MULTICA_WORKSPACES_ROOT: /workspace
       SSH_PORT: "22"
       TAILSCALE_SOCKET: /run/tailscale/tailscaled.sock
@@ -35,6 +44,8 @@ services:
       - ./data/home/multica:/home/multica/.multica
       # Persist Pi setup, settings, packages, and auth state.
       - ./data/home/pi:/home/multica/.pi
+      # Persist GitHub CLI authentication and configuration separately.
+      - ./data/home/gh:/home/multica/.config/gh
       # Persist the runtime user's SSH authorized_keys and known_hosts.
       - ./data/home/ssh:/home/multica/.ssh
       # Forward the host SSH agent for GitHub SSH clones.

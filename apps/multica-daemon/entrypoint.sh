@@ -30,6 +30,7 @@ if [[ "$(id -u)" != "${RUNTIME_UID}" ]]; then
   install -d -m 755 /etc/profile.d
   cat >/etc/profile.d/multica-runtime-mise.sh <<'EOF'
 export PATH="/home/multica/.local/share/mise/installs/node/26.7.0/bin:/home/multica/.local/share/mise/installs/bun/1.3.14/bin:/home/multica/.local/share/mise/installs/npm-pnpm/10.33.0/node_modules/.bin:/home/multica/.local/share/mise/installs/go/1.26.5/bin:/home/multica/.local/share/mise/installs/pi/0.84.1/pi:/home/multica/.local/share/mise/installs/pi/0.84.1:/home/multica/.local/bin:/home/multica/.local/share/mise/shims:${PATH}"
+export GH_CONFIG_DIR="/home/multica/.config/gh"
 EOF
   chmod 644 /etc/profile.d/multica-runtime-mise.sh
 
@@ -38,6 +39,7 @@ EOF
   # Use an absolute PATH here; /etc/environment does not expand $PATH.
   cat >/etc/environment <<'EOF'
 PATH="/home/multica/.local/share/mise/installs/node/26.7.0/bin:/home/multica/.local/share/mise/installs/bun/1.3.14/bin:/home/multica/.local/share/mise/installs/npm-pnpm/10.33.0/node_modules/.bin:/home/multica/.local/share/mise/installs/go/1.26.5/bin:/home/multica/.local/share/mise/installs/pi/0.84.1/pi:/home/multica/.local/share/mise/installs/pi/0.84.1:/home/multica/.local/bin:/home/multica/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+GH_CONFIG_DIR="/home/multica/.config/gh"
 EOF
   chmod 644 /etc/environment
 fi
@@ -63,7 +65,7 @@ fi
 # as the non-root sudoer account. Tailscale state and SSH host keys remain
 # root-owned because their daemons run with root privileges.
 if [[ "$(id -u)" != "${RUNTIME_UID}" ]]; then
-  for runtime_dir in /home/multica/.multica /home/multica/.pi /home/multica/.ssh /workspace /opt/src; do
+  for runtime_dir in /home/multica/.multica /home/multica/.pi /home/multica/.config/gh /home/multica/.ssh /workspace /opt/src; do
     mkdir -p "${runtime_dir}"
     chown -R "${RUNTIME_UID}:${RUNTIME_GID}" "${runtime_dir}"
   done
@@ -97,17 +99,11 @@ fi
 export PATH="${HOME}/.local/share/mise/installs/node/26.7.0/bin:${HOME}/.local/share/mise/installs/bun/1.3.14/bin:${HOME}/.local/share/mise/installs/npm-pnpm/10.33.0/node_modules/.bin:${HOME}/.local/share/mise/installs/go/1.26.5/bin:${HOME}/.local/share/mise/installs/pi/0.84.1/pi:${HOME}/.local/share/mise/installs/pi/0.84.1:${HOME}/.local/bin:${HOME}/.local/share/mise/shims:${PATH}"
 
 PI_SETUP_DIR="${PI_SETUP_DIR:-${HOME}/.pi/agent}"
-MULTICA_SOURCE_DIR="${MULTICA_SOURCE_DIR:-/opt/src/multica}"
-MULTICA_REPOSITORY="${MULTICA_REPOSITORY:-git@github.com:chanyeinthaw/multica.git}"
-# Source code comes from the fork above, while release tags come from the
-# canonical repository because the fork may not mirror upstream tags.
-MULTICA_TAG_REPOSITORY="${MULTICA_TAG_REPOSITORY:-https://github.com/multica-ai/multica.git}"
-MULTICA_REF="${MULTICA_REF:-feat/pi-thinking-model-resolution}"
 PI_SETUP_REPOSITORY="${PI_SETUP_REPOSITORY:-git@github.com:chanyeinthaw/pi-setup.git}"
 PI_SETUP_REF="${PI_SETUP_REF:-main}"
 SSH_KEY_DIR="${SSH_KEY_DIR:-${HOME}/.ssh}"
 
-mkdir -p "${PI_SETUP_DIR}" "${MULTICA_SOURCE_DIR}" "${HOME}/.multica" "${SSH_KEY_DIR}"
+mkdir -p "${PI_SETUP_DIR}" "${HOME}/.multica" "${SSH_KEY_DIR}"
 chmod 700 "${SSH_KEY_DIR}"
 
 if [[ -S "${SSH_AUTH_SOCK:-}" ]]; then
@@ -146,18 +142,6 @@ git_ensure_checkout() {
     git -C "${directory}" checkout --force "${ref}"
     git -C "${directory}" reset --hard "origin/${ref}"
   fi
-
-}
-
-sync_multica_release_tags() {
-  local directory="$1"
-  local tag_repo="$2"
-
-  # `make build` derives the daemon version from `git describe`. A
-  # single-branch clone does not include release tags, and forks do not always
-  # mirror upstream tags, which degrades the reported version to a bare commit
-  # hash that Multica's capability gates correctly treat as unparsable.
-  git -C "${directory}" fetch --force --tags "${tag_repo}"
 }
 
 log "Syncing pi setup into ${PI_SETUP_DIR}"
@@ -169,30 +153,16 @@ log "Installing pi setup dependencies"
   pnpm install --frozen-lockfile
 )
 
-log "Syncing Multica source branch ${MULTICA_REF}"
-git_ensure_checkout "${MULTICA_REPOSITORY}" "${MULTICA_SOURCE_DIR}" "${MULTICA_REF}"
-log "Syncing Multica release tags"
-sync_multica_release_tags "${MULTICA_SOURCE_DIR}" "${MULTICA_TAG_REPOSITORY}"
-
-log "Installing Multica dependencies"
-(
-  cd "${MULTICA_SOURCE_DIR}"
-  pnpm install --frozen-lockfile
-)
-
-log "Building Multica daemon"
-(
-  cd "${MULTICA_SOURCE_DIR}"
-  version="$(git describe --tags --match 'v[0-9]*' --always --dirty)"
-  if [[ ! "${version}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+($|-) ]]; then
-    printf '[multica-runtime] ERROR: refusing to build with unparsable CLI version %q\n' "${version}" >&2
-    exit 1
-  fi
-  log "Building Multica CLI version ${version}"
-  make build VERSION="${version}"
-)
-
-install -m 0755 "${MULTICA_SOURCE_DIR}/server/bin/multica" "${HOME}/.local/bin/multica"
+# The Multica CLI is built into the image. Fail early if a build accidentally
+# omitted it or if runtime configuration points at an unexpected Pi binary.
+if [[ ! -x /usr/local/bin/multica ]]; then
+  printf '[multica-runtime] ERROR: built-in Multica CLI is missing\n' >&2
+  exit 1
+fi
+if [[ -n "${MULTICA_PI_PATH:-}" && ! -x "${MULTICA_PI_PATH}" ]]; then
+  printf '[multica-runtime] ERROR: MULTICA_PI_PATH is not executable: %s\n' "${MULTICA_PI_PATH}" >&2
+  exit 1
+fi
 
 # The daemon reads its PAT from the CLI profile, not directly from
 # MULTICA_TOKEN. Seed the profile at startup from the ignored environment file.
