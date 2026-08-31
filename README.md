@@ -143,7 +143,7 @@ Services/
 │   │   ├── Dockerfile
 │   │   ├── entrypoint.sh
 │   │   ├── secrets/  # ignored, mounted read-only at /run/secrets
-│   │   └── data/     # ignored Friday, Pi, GitHub, and SSH state
+│   │   └── data/home/ # ignored Friday, Pi, GitHub, and SSH state
 │   ├── buzz/
 │   │   ├── compose.yaml
 │   │   ├── agent/

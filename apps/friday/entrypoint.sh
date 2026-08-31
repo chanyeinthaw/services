@@ -17,24 +17,25 @@ require_env DISCORD_BOT_TOKEN
 require_env DISCORD_APPLICATION_ID
 require_env DISCORD_PUBLIC_KEY
 
-RUNTIME_UID="$(id -u chan)"
-RUNTIME_GID="$(id -g chan)"
+RUNTIME_UID="$(id -u friday)"
+RUNTIME_GID="$(id -g friday)"
 
 if [[ "$(id -u)" != "${RUNTIME_UID}" ]]; then
-  for directory in /home/chan/Code/orbs-at-home/.friday /home/chan/.pi /home/chan/.config/gh /home/chan/.ssh; do
+  for directory in /home/friday/.friday /home/friday/.pi /home/friday/.config/gh /home/friday/.ssh; do
     mkdir -p "${directory}"
     chown -R "${RUNTIME_UID}:${RUNTIME_GID}" "${directory}"
   done
-  exec sudo -E -u chan -H /usr/local/bin/friday-runtime-entrypoint
+  exec sudo -E -u friday -H /usr/local/bin/friday-runtime-entrypoint
 fi
 
-export HOME=/home/chan
-export FRIDAY_HOME=/home/chan/Code/orbs-at-home/.friday
-export GH_CONFIG_DIR=/home/chan/.config/gh
-export MISE_DATA_DIR=/home/chan/.local/share/mise
-export MISE_CONFIG_DIR=/home/chan/.config/mise
-export MISE_CACHE_DIR=/home/chan/.cache/mise
-export PATH="/home/chan/.local/share/mise/installs/node/26.7.0/bin:/home/chan/.local/share/mise/installs/bun/1.3.14/bin:/home/chan/.local/share/mise/installs/npm-pnpm/10.33.0/node_modules/.bin:/home/chan/.local/share/mise/installs/pi/0.84.1/pi:/home/chan/.local/share/mise/installs/pi/0.84.1:/home/chan/.local/bin:/home/chan/.local/share/mise/shims:${PATH}"
+export HOME=/home/friday
+export CI=true
+export FRIDAY_HOME=/home/friday/.friday
+export GH_CONFIG_DIR=/home/friday/.config/gh
+export MISE_DATA_DIR=/home/friday/.local/share/mise
+export MISE_CONFIG_DIR=/home/friday/.config/mise
+export MISE_CACHE_DIR=/home/friday/.cache/mise
+export PATH="/home/friday/.local/share/mise/installs/node/26.7.0/bin:/home/friday/.local/share/mise/installs/bun/1.3.14/bin:/home/friday/.local/share/mise/installs/npm-pnpm/10.33.0/node_modules/.bin:/home/friday/.local/share/mise/installs/pi/0.84.1/pi:/home/friday/.local/share/mise/installs/pi/0.84.1:/home/friday/.local/bin:/home/friday/.local/share/mise/shims:${PATH}"
 
 PI_SETUP_DIR="${PI_SETUP_DIR:-${HOME}/.pi/agent}"
 PI_SETUP_REPOSITORY="${PI_SETUP_REPOSITORY:-git@github.com:chanyeinthaw/pi-setup.git}"

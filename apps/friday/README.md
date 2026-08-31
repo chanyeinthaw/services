@@ -9,14 +9,14 @@ The image contains Friday `v0.0.0-nightly.2`, Pi `0.84.1`, Bun, Node.js, pnpm, G
 ## Persistent data
 
 ```text
-data/friday → /home/chan/Code/orbs-at-home/.friday
-data/pi     → /home/chan/.pi
-data/gh     → /home/chan/.config/gh
-data/ssh    → /home/chan/.ssh
-secrets/runtime → /run/secrets, read-only
+data/home/friday → /home/friday/.friday
+data/home/pi     → /home/friday/.pi
+data/home/gh     → /home/friday/.config/gh
+data/home/ssh    → /home/friday/.ssh
+secrets/runtime  → /run/secrets, read-only
 ```
 
-The container preserves `/home/chan/Code/orbs-at-home/.friday` and `/home/chan/.pi` so durable Friday workspaces and Pi session paths remain valid after migration from the host development runtime.
+The deployment has an isolated `friday` user and service home. It does not mount or reference the `orbs-at-home` development checkout.
 
 ## Discord policy
 
@@ -28,7 +28,7 @@ invocation default: all-messages
 management channel: 1543786249888727060
 ```
 
-The management channel is a system channel. Friday replies directly there, uses `/home/chan/Code/orbs-at-home/.friday` as its workspace, and does not create Discord child threads.
+The management channel is a system channel. Friday replies directly there, uses `/home/friday/.friday` as its workspace, and does not create Discord child threads.
 
 ## Commands
 
