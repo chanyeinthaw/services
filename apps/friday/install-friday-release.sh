@@ -64,6 +64,11 @@ else
   CURRENT_VERSION="$(normalize_version "$("${BOOTSTRAP_BINARY}" --version)")"
 fi
 
+if [[ -e "${PREVIOUS_BINARY}" ]] && ! "${PREVIOUS_BINARY}" --version >/dev/null 2>&1; then
+  log "Replacing an invalid rollback binary with the bundled bootstrap"
+  install -m 0755 "${BOOTSTRAP_BINARY}" "${PREVIOUS_BINARY}"
+fi
+
 if [[ "${CURRENT_VERSION}" == "${VERSION}" && ! -x "${ACTIVE_BINARY}" ]]; then
   log "Installing bundled Friday ${VERSION}"
   install -m 0755 "${BOOTSTRAP_BINARY}" "${ACTIVE_BINARY}"
