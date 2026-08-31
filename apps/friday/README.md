@@ -4,7 +4,7 @@ Runs the pinned Friday release as a persistent Docker service.
 
 ## Runtime
 
-The image contains Friday `v0.0.0-nightly.2`, Pi `0.84.1`, Bun, Node.js, pnpm, Git, and GitHub CLI. At startup it refreshes `git@github.com:chanyeinthaw/pi-setup.git`, installs its dependencies, and disables the Pi subagents extension by renaming `extensions/subagents.ts` to `extensions/subagents.txt`. Friday owns background orchestration itself.
+The image contains Friday `v0.0.0-nightly.3`, Pi `0.84.1`, Bun, Node.js, pnpm, Git, and GitHub CLI. At startup it refreshes `git@github.com:chanyeinthaw/pi-setup.git`, installs its dependencies, and disables the Pi subagents extension by renaming `extensions/subagents.ts` to `extensions/subagents.txt`. Friday owns background orchestration itself.
 
 ## Persistent data
 
