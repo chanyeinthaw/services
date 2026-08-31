@@ -5,7 +5,7 @@ FRIDAY_HOME="${FRIDAY_HOME:-/home/friday/.friday}"
 ACTIVE_BINARY="${FRIDAY_HOME}/bin/friday"
 PREVIOUS_BINARY="${FRIDAY_HOME}/bin/friday.previous"
 PENDING_UPDATE="${FRIDAY_HOME}/update/pending.json"
-MAX_ATTEMPTS="${FRIDAY_UPDATE_MAX_ATTEMPTS:-3}"
+MAX_ATTEMPTS="${FRIDAY_UPDATE_MAX_ATTEMPTS:-2}"
 
 if [[ -f "${PENDING_UPDATE}" ]]; then
   attempts="$(jq -er '.attempts // 0' "${PENDING_UPDATE}")"
