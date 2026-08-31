@@ -1,0 +1,31 @@
+name: services-friday
+
+services:
+  friday:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        FRIDAY_VERSION: ${FRIDAY_VERSION:-v0.0.0-nightly.2}
+        FRIDAY_TARGET: ${FRIDAY_TARGET:-linux-x64}
+    image: local/friday:${FRIDAY_VERSION:-v0.0.0-nightly.2}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HOME: /home/chan
+      FRIDAY_HOME: /home/chan/Code/orbs-at-home/.friday
+      GH_CONFIG_DIR: /home/chan/.config/gh
+      PI_SETUP_DIR: /home/chan/.pi/agent
+    volumes:
+      - ./data/friday:/home/chan/Code/orbs-at-home/.friday
+      - ./data/pi:/home/chan/.pi
+      - ./data/gh:/home/chan/.config/gh
+      - ./data/ssh:/home/chan/.ssh
+      - ./secrets/runtime:/run/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /home/chan/Code/orbs-at-home/.friday/friday.sqlite && pgrep -x friday >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s

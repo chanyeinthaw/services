@@ -2,3 +2,4 @@
 databases/migrations/
 **/.env
 apps/multica-daemon/secrets/
+apps/friday/secrets/

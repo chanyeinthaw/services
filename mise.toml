@@ -107,6 +107,31 @@ description = "Follow MinIO logs"
 raw = true
 run = "docker compose -f apps/minio/compose.yaml logs --follow"
 
+[tasks."friday:build"]
+description = "Build the pinned Friday runtime image"
+run = "docker compose -f apps/friday/compose.yaml build"
+
+[tasks."friday:up"]
+description = "Start Friday and wait until it is healthy"
+run = "docker compose -f apps/friday/compose.yaml up -d --build --remove-orphans --wait --wait-timeout 300"
+
+[tasks."friday:down"]
+description = "Stop Friday without deleting persistent state"
+run = "docker compose -f apps/friday/compose.yaml down --remove-orphans"
+
+[tasks."friday:restart"]
+description = "Recreate the Friday runtime"
+run = "docker compose -f apps/friday/compose.yaml up -d --build --force-recreate --remove-orphans --wait --wait-timeout 300"
+
+[tasks."friday:logs"]
+description = "Follow Friday logs"
+raw = true
+run = "docker compose -f apps/friday/compose.yaml logs --follow friday"
+
+[tasks."friday:status"]
+description = "Show Friday runtime status"
+run = "docker compose -f apps/friday/compose.yaml ps"
+
 [tasks."multica:up"]
 description = "Start Multica and its dedicated PostgreSQL stack"
 run = "docker compose -f apps/multica/compose.yaml up -d --remove-orphans --wait --wait-timeout 180"
@@ -114,6 +139,10 @@ run = "docker compose -f apps/multica/compose.yaml up -d --remove-orphans --wait
 [tasks."multica:down"]
 description = "Stop Multica without deleting its data"
 run = "docker compose -f apps/multica/compose.yaml down --remove-orphans"
+
+[tasks."multica-daemon:ssh-public-key"]
+description = "Print the dedicated Multica daemon GitHub public key"
+run = "sudo cat apps/multica-daemon/data/home/ssh/id_ed25519.pub"
 
 [tasks."multica-daemon:up"]
 description = "Build and start the Multica Docker runtime daemon"

@@ -138,6 +138,12 @@ Services/
 │   │   ├── compose.yaml
 │   │   ├── .env          # ignored credentials
 │   │   └── data/         # ignored object data
+│   ├── friday/
+│   │   ├── compose.yaml
+│   │   ├── Dockerfile
+│   │   ├── entrypoint.sh
+│   │   ├── secrets/  # ignored, mounted read-only at /run/secrets
+│   │   └── data/     # ignored Friday, Pi, GitHub, and SSH state
 │   ├── buzz/
 │   │   ├── compose.yaml
 │   │   ├── agent/
@@ -183,6 +189,11 @@ mise run llm-proxy:logs
 mise run minio:up
 mise run minio:down
 mise run minio:logs
+
+mise run friday:up
+mise run friday:down
+mise run friday:status
+mise run friday:logs
 
 mise run buzz:up
 mise run buzz:down
