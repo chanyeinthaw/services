@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-exec supervisorctl -c /etc/supervisor/supervisord.conf restart friday
+CONFIG=/etc/supervisor/supervisord.conf
+
+# Friday may invoke this command from its own process group. Schedule the start
+# from a detached session first, then stop Friday. Otherwise Supervisor kills the
+# supervisorctl caller with the rest of Friday's process group before it can issue
+# the start command.
+setsid sh -c '
+  sleep 2
+  supervisorctl -c "$1" start friday
+' sh "${CONFIG}" </dev/null >/home/friday/.friday/logs/self-restart.log 2>&1 &
+
+exec supervisorctl -c "${CONFIG}" stop friday

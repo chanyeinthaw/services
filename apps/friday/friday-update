@@ -2,4 +2,4 @@
 set -Eeuo pipefail
 
 /usr/local/bin/friday-install-release "${1:-latest}"
-exec supervisorctl -c /etc/supervisor/supervisord.conf restart friday
+exec /usr/local/bin/friday-restart
