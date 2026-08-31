@@ -6,9 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        FRIDAY_VERSION: ${FRIDAY_VERSION:-v0.0.0-nightly.5}
+        FRIDAY_VERSION: ${FRIDAY_VERSION:-v0.0.0-nightly.7}
         FRIDAY_TARGET: ${FRIDAY_TARGET:-linux-x64}
-    image: local/friday:${FRIDAY_VERSION:-v0.0.0-nightly.5}
+    image: local/friday:${FRIDAY_VERSION:-v0.0.0-nightly.7}
     restart: unless-stopped
     env_file:
       - .env
