@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+FRIDAY_HOME="${FRIDAY_HOME:-/home/friday/.friday}"
+test -f "${FRIDAY_HOME}/friday.sqlite"
+supervisorctl -c /etc/supervisor/supervisord.conf status friday | grep -q '^friday[[:space:]]\+RUNNING'
+rm -f "${FRIDAY_HOME}/update/pending.json"

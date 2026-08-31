@@ -17,6 +17,9 @@ services:
       FRIDAY_HOME: /home/friday/.friday
       GH_CONFIG_DIR: /home/friday/.config/gh
       PI_SETUP_DIR: /home/friday/.pi/agent
+      FRIDAY_TARGET: ${FRIDAY_TARGET:-linux-x64}
+      FRIDAY_UPDATE_CHANNEL: ${FRIDAY_UPDATE_CHANNEL:-nightly}
+      FRIDAY_UPDATE_ON_START: ${FRIDAY_UPDATE_ON_START:-true}
     volumes:
       - ./data/home/friday:/home/friday/.friday
       - ./data/home/pi:/home/friday/.pi
@@ -24,7 +27,7 @@ services:
       - ./data/home/ssh:/home/friday/.ssh
       - ./secrets/runtime:/run/secrets:ro
     healthcheck:
-      test: ["CMD-SHELL", "test -f /home/friday/.friday/friday.sqlite && pgrep -x friday >/dev/null"]
+      test: ["CMD", "/usr/local/bin/friday-healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 5

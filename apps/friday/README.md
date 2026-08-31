@@ -1,10 +1,42 @@
 # Friday runtime
 
-Runs the pinned Friday release as a persistent Docker service.
+Runs Friday as a persistent Docker service managed by Supervisor inside the container.
 
 ## Runtime
 
-The image contains Friday `v0.0.0-nightly.3`, Pi `0.84.1`, Bun, Node.js, pnpm, Git, and GitHub CLI. At startup it refreshes `git@github.com:chanyeinthaw/pi-setup.git`, installs its dependencies, and disables the Pi subagents extension by renaming `extensions/subagents.ts` to `extensions/subagents.txt`. Friday owns background orchestration itself.
+The image contains a verified bootstrap Friday release, Supervisor, Pi `0.84.1`, Bun, Node.js, pnpm, Git, and GitHub CLI. The active Friday binary lives at:
+
+```text
+/home/friday/.friday/bin/friday
+```
+
+That path is persistent, so Friday can update independently of the image. On container startup the entrypoint checks the configured update channel, verifies the selected GitHub release against `SHA256SUMS`, atomically installs it, and then starts Supervisor. If GitHub is unavailable, startup continues with the existing persistent binary. A new installation falls back to the bootstrap binary packaged in the image.
+
+At startup the entrypoint also refreshes `git@github.com:chanyeinthaw/pi-setup.git`, installs its dependencies, and disables the Pi subagents extension by renaming `extensions/subagents.ts` to `extensions/subagents.txt`. Friday owns background orchestration itself.
+
+## Self-management
+
+Inside the container, Friday can restart its process without restarting the container:
+
+```bash
+friday-restart
+```
+
+It can install the latest nightly release and restart into it:
+
+```bash
+friday-update
+```
+
+An exact release may be selected explicitly:
+
+```bash
+friday-update v0.0.0-nightly.7
+```
+
+Updates retain the previous binary and use atomic replacement. The health check clears the pending-update marker after Supervisor reports Friday as running. Repeated early startup failures restore the previous binary.
+
+A Supervisor restart reuses the installed binary and does not perform another update check. Container startup performs the update check when `FRIDAY_UPDATE_ON_START=true`.
 
 ## Persistent data
 
@@ -30,7 +62,7 @@ management channel: 1543786249888727060
 
 The management channel is a system channel. Friday replies directly there, uses `/home/friday/.friday` as its workspace, and does not create Discord child threads.
 
-## Commands
+## Host commands
 
 From `/home/chan/Services`:
 
@@ -43,4 +75,4 @@ mise run friday:restart
 mise run friday:down
 ```
 
-The `.env` file contains the Discord application credentials and is ignored by Git. Provider authentication is retained under `data/pi`.
+The `.env` file contains Discord application credentials and is ignored by Git. Provider authentication is retained under `data/pi`.

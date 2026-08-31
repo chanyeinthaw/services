@@ -34,7 +34,8 @@ ENV LANG=C.UTF-8 \
     MISE_CONFIG_DIR=/home/friday/.config/mise \
     MISE_CACHE_DIR=/home/friday/.cache/mise \
     PI_SETUP_DIR=/home/friday/.pi/agent \
-    PATH=/home/friday/.local/share/mise/installs/node/26.7.0/bin:/home/friday/.local/share/mise/installs/bun/1.3.14/bin:/home/friday/.local/share/mise/installs/npm-pnpm/10.33.0/node_modules/.bin:/home/friday/.local/share/mise/installs/pi/0.84.1/pi:/home/friday/.local/share/mise/installs/pi/0.84.1:/home/friday/.local/bin:/home/friday/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    FRIDAY_BOOTSTRAP_VERSION=${FRIDAY_VERSION} \
+    PATH=/home/friday/.friday/bin:/home/friday/.local/share/mise/installs/node/26.7.0/bin:/home/friday/.local/share/mise/installs/bun/1.3.14/bin:/home/friday/.local/share/mise/installs/npm-pnpm/10.33.0/node_modules/.bin:/home/friday/.local/share/mise/installs/pi/0.84.1/pi:/home/friday/.local/share/mise/installs/pi/0.84.1:/home/friday/.local/bin:/home/friday/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -51,6 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       procps \
       python3 \
       ripgrep \
+      supervisor \
       sudo \
       tini \
       unzip \
@@ -72,8 +74,14 @@ RUN curl https://mise.run | sh
 COPY --chown=friday:friday mise.toml /home/friday/mise.toml
 RUN mise trust -y /home/friday/mise.toml && mise install --yes
 
-COPY --from=friday-download --chmod=0755 /usr/local/bin/friday /usr/local/bin/friday
+COPY --from=friday-download --chmod=0755 /usr/local/bin/friday /usr/local/lib/friday/bootstrap/friday
 COPY --chmod=0755 entrypoint.sh /usr/local/bin/friday-runtime-entrypoint
+COPY --chmod=0755 install-friday-release.sh /usr/local/bin/friday-install-release
+COPY --chmod=0755 run-friday.sh /usr/local/bin/friday-run
+COPY --chmod=0755 friday-update /usr/local/bin/friday-update
+COPY --chmod=0755 friday-restart /usr/local/bin/friday-restart
+COPY --chmod=0755 friday-healthcheck /usr/local/bin/friday-healthcheck
+COPY supervisord.conf /etc/supervisor/supervisord.conf
 
 USER root
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/friday-runtime-entrypoint"]

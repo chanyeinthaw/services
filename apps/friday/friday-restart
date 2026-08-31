@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+exec supervisorctl -c /etc/supervisor/supervisord.conf restart friday

@@ -97,5 +97,17 @@ if [[ ! -f "${FRIDAY_HOME}/friday.sqlite" ]]; then
   exit 1
 fi
 
-log "Starting Friday"
-exec friday start
+mkdir -p "${FRIDAY_HOME}/bin" "${FRIDAY_HOME}/logs" "${FRIDAY_HOME}/run" "${FRIDAY_HOME}/update"
+rm -f "${FRIDAY_HOME}/run/supervisor.sock" "${FRIDAY_HOME}/run/supervisord.pid"
+
+if [[ "${FRIDAY_UPDATE_ON_START:-true}" == "true" ]]; then
+  log "Checking for a Friday ${FRIDAY_UPDATE_CHANNEL:-nightly} update"
+  if ! /usr/local/bin/friday-install-release latest; then
+    log "Update check failed; continuing with the installed runtime binary"
+  fi
+elif [[ ! -x "${FRIDAY_HOME}/bin/friday" ]]; then
+  /usr/local/bin/friday-install-release "${FRIDAY_BOOTSTRAP_VERSION}"
+fi
+
+log "Starting Friday under supervisord"
+exec supervisord -c /etc/supervisor/supervisord.conf
