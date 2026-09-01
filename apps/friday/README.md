@@ -31,7 +31,7 @@ friday-update
 An exact release may be selected explicitly:
 
 ```bash
-friday-update v0.0.0-nightly.11
+friday-update v0.0.0-nightly.12
 ```
 
 Updates retain the previous binary and use atomic replacement. The health check clears the pending-update marker after Supervisor reports Friday as running. Repeated early startup failures restore the previous binary.
